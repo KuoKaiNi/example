@@ -16,20 +16,25 @@
 </form>
 
 <table>
-  <thead><tr><th>代號</th><th>張數</th><th>買進價</th><th></th></tr></thead>
+  <thead><tr><th>代號</th><th>名稱</th><th>市場</th><th>張數／買進價</th><th>收盤價</th><th>日期</th><th></th></tr></thead>
   <tbody>
-  <tr th:each="h : ${holdings}">
+  <tr th:each="v : ${holdings}" th:with="h=${v.holding}, q=${v.quote}">
     <td th:text="${h.code}"></td>
-    <td colspan="2">
+    <td class="l" th:text="${h.name}"></td>
+    <td class="l" th:text="${h.market == 'TWSE' ? '上市' : (h.market == 'TPEX' ? '上櫃' : '')}"></td>
+    <td>
       <form class="inline" method="post" th:action="@{/holdings/{id}/update(id=${h.id})}">
         <input name="lots" type="number" min="1" max="999" th:value="${h.lots}">
         <input name="buyPrice" type="number" step="0.01" th:value="${h.buyPrice}">
         <button>修改</button>
       </form>
     </td>
+    <td th:if="${q != null}" th:text="${#numbers.formatDecimal(q.close, 1, 'COMMA', 2, 'POINT')}"></td>
+    <td th:if="${q != null}" th:text="${q.date}"></td>
+    <td th:if="${q == null}" colspan="2" class="muted">未取得</td>
     <td><form class="inline" method="post" th:action="@{/holdings/{id}/delete(id=${h.id})}"><button>刪除</button></form></td>
   </tr>
-  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="4" class="muted l">還沒有持股</td></tr>
+  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="7" class="muted l">還沒有持股</td></tr>
   </tbody>
 </table>
 </main></body></html>

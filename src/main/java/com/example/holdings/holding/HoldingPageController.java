@@ -20,7 +20,7 @@ public class HoldingPageController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("holdings", service.list());
+        model.addAttribute("holdings", service.listWithQuotes());
         return "holdings";
     }
 
