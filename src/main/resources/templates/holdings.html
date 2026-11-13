@@ -6,53 +6,54 @@
 <p><a th:href="@{/}">首頁</a></p>
 <h1>持股清單</h1>
 <p class="err" th:if="${error}" th:text="${error}"></p>
-<p th:if="${message}" th:text="${message}"></p>
+<p class="ok" th:if="${message}" th:text="${message}"></p>
 
 <table class="summary" th:with="s=${summary}">
-  <tr><th>總成本</th><th>總市值</th><th>總盈虧</th><th>收益率</th></tr>
+  <tr><th>持股成本</th><th>市值</th><th>未實現損益</th><th>收益率</th><th>已實現損益</th></tr>
   <tr>
     <td th:text="${#numbers.formatInteger(s.totalCost, 1, 'COMMA')}"></td>
     <td th:text="${#numbers.formatInteger(s.marketValue, 1, 'COMMA')}"></td>
     <td th:classappend="${s.pnl > 0 ? 'up' : (s.pnl < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(s.pnl, 1, 'COMMA')}"></td>
     <td th:classappend="${s.pnl > 0 ? 'up' : (s.pnl < 0 ? 'down' : '')}" th:text="${s.returnPct} + '%'"></td>
+    <td th:classappend="${s.realized > 0 ? 'up' : (s.realized < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(s.realized, 1, 'COMMA')}"></td>
   </tr>
 </table>
-<p class="muted" th:if="${summary.quoteMissing > 0}" th:text="|有 ${summary.quoteMissing} 筆取不到收盤價，沒有算進總市值與總盈虧|"></p>
-<p class="muted">盈虧＝假設用收盤價全部賣出，扣掉買賣手續費與證交稅後的淨額。紅色是賺、綠色是虧。</p>
+<p class="muted" th:if="${summary.quoteMissing > 0}" th:text="|有 ${summary.quoteMissing} 檔取不到收盤價，沒有算進市值與未實現損益|"></p>
+<p class="muted">未實現損益＝假設用收盤價把剩下的持股全部賣出，扣掉買賣手續費與證交稅後的淨額。成本用移動平均。紅色是賺、綠色是虧。</p>
 
-
-<form method="post" th:action="@{/holdings}">
+<h2>記一筆買賣</h2>
+<form method="post" th:action="@{/holdings/trades}" class="trade">
+  <select name="side"><option value="BUY">買進</option><option value="SELL">賣出</option></select>
   代號 <input name="code" required placeholder="2330">
-  張數 <input name="lots" type="number" min="1" max="999" required>
-  買進價 <input name="buyPrice" type="number" step="0.01" min="0.01" required>
-  <button>新增</button>
+  日期 <input name="tradeDate" type="date" th:value="${today}" th:max="${today}" required>
+  股數 <input name="shares" type="number" min="1" required placeholder="1000">
+  價格 <input name="price" type="number" step="0.01" min="0.01" required>
+  <button>記下</button>
 </form>
+<p class="muted">股數用「股」記：1 張 = 1,000 股，零股直接填股數。</p>
 
 <table>
-  <thead><tr><th>代號</th><th>名稱</th><th>市場</th><th>張數／買進價</th><th>收盤價</th><th>日期</th><th>盈虧</th><th>收益率</th><th></th></tr></thead>
+  <thead><tr><th>代號</th><th>名稱</th><th>市場</th><th>股數</th><th>平均成本</th><th>收盤價</th><th>日期</th><th>未實現</th><th>收益率</th><th>已實現</th></tr></thead>
   <tbody>
-  <tr th:each="v : ${holdings}" th:with="h=${v.holding}, q=${v.quote}">
-    <td th:text="${h.code}"></td>
+  <tr th:each="v : ${holdings}" th:with="h=${v.holding}, p=${v.position}, q=${v.quote}, u=${v.unrealized}">
+    <td><a th:href="@{/holdings/{id}(id=${h.id})}" th:text="${h.code}"></a></td>
     <td class="l" th:text="${h.name}"></td>
     <td class="l" th:text="${h.market == 'TWSE' ? '上市' : (h.market == 'TPEX' ? '上櫃' : '')}"></td>
-    <td>
-      <form class="inline" method="post" th:action="@{/holdings/{id}/update(id=${h.id})}">
-        <input name="lots" type="number" min="1" max="999" th:value="${h.lots}">
-        <input name="buyPrice" type="number" step="0.01" th:value="${h.buyPrice}">
-        <button>修改</button>
-      </form>
-    </td>
+    <td th:text="${#numbers.formatInteger(p.shares, 1, 'COMMA')}"></td>
+    <td th:text="${p.avgCost == null ? '－' : #numbers.formatDecimal(p.avgCost, 1, 'COMMA', 2, 'POINT')}"></td>
     <td th:if="${q != null}" th:text="${#numbers.formatDecimal(q.close, 1, 'COMMA', 2, 'POINT')}"></td>
     <td th:if="${q != null}" th:text="${q.date}"></td>
-    <td th:if="${q == null}" colspan="2" class="muted">未取得</td>
-    <th:block th:with="p=${v.pnl}">
-    <td th:if="${p != null}" th:classappend="${p.pnl > 0 ? 'up' : (p.pnl < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(p.pnl, 1, 'COMMA')}"></td>
-    <td th:if="${p != null}" th:classappend="${p.pnl > 0 ? 'up' : (p.pnl < 0 ? 'down' : '')}" th:text="${p.returnPct} + '%'"></td>
-    <td th:if="${p == null}" colspan="2" class="muted">－</td>
-    </th:block>
-    <td><form class="inline" method="post" th:action="@{/holdings/{id}/delete(id=${h.id})}"><button>刪除</button></form></td>
+    <td th:if="${q == null}" colspan="2" class="muted" th:text="${v.open ? '未取得' : '已全部賣出'}"></td>
+    <td th:if="${u != null}" th:classappend="${u.pnl > 0 ? 'up' : (u.pnl < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(u.pnl, 1, 'COMMA')}"></td>
+    <td th:if="${u != null}" th:classappend="${u.pnl > 0 ? 'up' : (u.pnl < 0 ? 'down' : '')}" th:text="${u.returnPct} + '%'"></td>
+    <td th:if="${u == null}" colspan="2" class="muted">－</td>
+    <td th:classappend="${p.realized > 0 ? 'up' : (p.realized < 0 ? 'down' : '')}" th:text="${p.realized == 0 ? '－' : #numbers.formatInteger(p.realized, 1, 'COMMA')}"></td>
   </tr>
-  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="9" class="muted l">還沒有持股</td></tr>
+  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="10" class="muted l">還沒有持股</td></tr>
   </tbody>
 </table>
+<p th:if="${closedCount > 0}">
+  <a th:if="${!showClosed}" th:href="@{/holdings(closed=true)}" th:text="|顯示已全部賣出的 ${closedCount} 檔|"></a>
+  <a th:if="${showClosed}" th:href="@{/holdings}">只看還有持股的</a>
+</p>
 </main></body></html>

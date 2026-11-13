@@ -8,3 +8,6 @@ th:first-child,td:first-child,td.l{text-align:left}
 form.inline{display:inline}
 input{width:7em}
 table.summary{margin-bottom:12px}table.summary td{font-size:18px;font-weight:600}
+.ok{background:#e6f4ea;padding:8px 12px;border-radius:6px}
+form.trade{background:#fff;border:1px solid #d6d9d3;padding:10px;border-radius:8px}
+h2{font-size:17px;margin-top:24px}

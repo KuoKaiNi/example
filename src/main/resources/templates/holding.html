@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant-TW" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title th:text="${v.holding.code} + ' 買賣紀錄'">買賣紀錄</title>
+<link rel="stylesheet" th:href="@{/app.css}"></head>
+<body><main th:with="h=${v.holding}, p=${v.position}, q=${v.quote}, u=${v.unrealized}">
+<p><a th:href="@{/holdings}">回持股清單</a></p>
+<h1 th:text="|${h.code} ${h.name}|"></h1>
+<p class="err" th:if="${error}" th:text="${error}"></p>
+<p class="ok" th:if="${message}" th:text="${message}"></p>
+
+<table class="summary">
+  <tr><th>持有股數</th><th>平均成本</th><th>收盤價</th><th>未實現損益</th><th>已實現損益</th></tr>
+  <tr>
+    <td th:text="${#numbers.formatInteger(p.shares, 1, 'COMMA')}"></td>
+    <td th:text="${p.avgCost == null ? '－' : #numbers.formatDecimal(p.avgCost, 1, 'COMMA', 2, 'POINT')}"></td>
+    <td th:text="${q == null ? (v.open ? '未取得' : '－') : #numbers.formatDecimal(q.close, 1, 'COMMA', 2, 'POINT') + '（' + q.date + '）'}"></td>
+    <td th:classappend="${u != null and u.pnl > 0 ? 'up' : (u != null and u.pnl < 0 ? 'down' : '')}"
+        th:text="${u == null ? '－' : #numbers.formatInteger(u.pnl, 1, 'COMMA') + '（' + u.returnPct + '%）'}"></td>
+    <td th:classappend="${p.realized > 0 ? 'up' : (p.realized < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(p.realized, 1, 'COMMA')}"></td>
+  </tr>
+</table>
+
+<h2>記一筆買賣</h2>
+<form method="post" th:action="@{/holdings/trades}" class="trade">
+  <input type="hidden" name="code" th:value="${h.code}">
+  <input type="hidden" name="back" th:value="${h.id}">
+  <select name="side"><option value="BUY">買進</option><option value="SELL">賣出</option></select>
+  日期 <input name="tradeDate" type="date" th:value="${today}" th:max="${today}" required>
+  股數 <input name="shares" type="number" min="1" required>
+  價格 <input name="price" type="number" step="0.01" min="0.01" required>
+  <button>記下</button>
+</form>
+
+<h2>買賣紀錄</h2>
+<p class="muted" th:if="${p.lines.size() > 0}">從 1.0 轉過來的買進沒有實際日期，用的是當初輸入的日期；要補記更早的賣出，先把買進日期改成實際的日期。</p>
+<table>
+  <thead><tr><th>日期／股數／價格</th><th>買賣</th><th>金額</th><th>手續費</th><th>證交稅</th><th>已實現損益</th><th>之後持有</th><th></th></tr></thead>
+  <tbody>
+  <tr th:each="l : ${p.lines}" th:with="e=${l.entry}">
+    <td class="l"><form class="inline" method="post" th:action="@{/holdings/trades/{t}/update(t=${e.id})}">
+      <input type="hidden" name="back" th:value="${h.id}">
+      <input name="tradeDate" type="date" th:value="${e.date}" th:max="${today}" style="width:9.5em">
+      <input name="shares" type="number" min="1" th:value="${e.shares}">
+      <input name="price" type="number" step="0.01" min="0.01" th:value="${e.price}">
+      <button>修改</button></form></td>
+    <td class="l" th:classappend="${e.side.name() == 'BUY' ? 'up' : 'down'}" th:text="${e.side.name() == 'BUY' ? '買進' : '賣出'}"></td>
+    <td th:text="${#numbers.formatInteger(l.amount, 1, 'COMMA')}"></td>
+    <td th:text="${l.fee}"></td>
+    <td th:text="${l.tax == 0 ? '－' : #numbers.formatInteger(l.tax, 1, 'COMMA')}"></td>
+    <td th:classappend="${l.realized > 0 ? 'up' : (l.realized < 0 ? 'down' : '')}"
+        th:text="${e.side.name() == 'BUY' ? '－' : #numbers.formatInteger(l.realized, 1, 'COMMA')}"></td>
+    <td th:text="${#numbers.formatInteger(l.sharesAfter, 1, 'COMMA')}"></td>
+    <td><form class="inline" method="post" th:action="@{/holdings/trades/{t}/delete(t=${e.id})}">
+      <input type="hidden" name="back" th:value="${h.id}"><button>刪除</button></form></td>
+  </tr>
+  </tbody>
+</table>
+
+<form method="post" th:action="@{/holdings/{id}/delete(id=${h.id})}" onsubmit="return confirm('整檔連同所有買賣紀錄一起刪除？')">
+  <p><button>刪除整檔</button></p>
+</form>
+</main></body></html>
