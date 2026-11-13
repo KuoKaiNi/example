@@ -24,11 +24,17 @@ docker compose up -d          # 起 MySQL，對外 port 3307（避開本機可�
 | 網址 | 內容 |
 |---|---|
 | `/` | 首頁 |
-| `/holdings` | 持股清單：新增、修改、刪除，顯示收盤價、盈虧、總計 |
+| `/holdings` | 持股清單：記買進、賣出（股數用「股」，可記零股），顯示平均成本、收盤價、未實現與已實現損益、總計 |
+| `/holdings/{id}` | 單檔的買賣紀錄：每筆的手續費、證交稅、已實現損益；可以修改、刪除 |
 
-## App 1.0 用的 API
+## API
 
-照《App 1.0 API 規格》實作，路徑 `/api/v1`，欄位用小寫加底線。
+| 版本 | 路徑 | 文件 |
+|---|---|---|
+| 1.0 | `/api/v1` | 《App 1.0 API 規格》，格式不會再改 |
+| 2.0 | `/api/v2` | [API.md](API.md) |
+
+從 1.0 升到 2.0 的步驟、資料庫變動、App 1.0 會看到什麼：[UPGRADE.md](UPGRADE.md)
 
 ```bash
 curl -X POST localhost:8080/api/v1/holdings -H 'Content-Type: application/json' \
@@ -44,7 +50,16 @@ curl localhost:8080/api/v1/summary
 ```
 
 測試不連網：行情改用 `FakeMarketData`，資料庫用 H2（MySQL 模式），不用先起 Docker。
-`ApiV1ContractTest` 是 App 1.0 的契約，之後的版本只能加測試、不能改這個檔案裡的預期值。
+
+| 測試 | 內容 |
+|---|---|
+| `ApiV1ContractTest` | App 1.0 的契約。**v1.0.0 之後沒改過**，2.0 照樣全部通過 |
+| `ApiV1CompatTest` | 2.0 記了零股、多筆買賣之後，App 1.0 看到的樣子 |
+| `ApiV2Test`、`PositionTest` | 2.0 的買賣、移動平均成本、已實現損益 |
+| `MigrationTest` | 資料庫停在 1.0、有資料，升級後 id 不變、張數換成股數 |
+| `ConcurrentSellTest` | 兩筆賣出同時進來只能成功一筆 |
+
+> H2 的交易隔離跟 MySQL 不同，`ConcurrentSellTest` 在 H2 上通過不代表 MySQL 沒問題（2.0 開發時就踩過，見 REVIEW.md）。改到鎖或交易的程式時，要在 MySQL 上手動再驗一次。
 
 ## 行情資料
 
