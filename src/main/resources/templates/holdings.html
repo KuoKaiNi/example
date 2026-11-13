@@ -8,6 +8,19 @@
 <p class="err" th:if="${error}" th:text="${error}"></p>
 <p th:if="${message}" th:text="${message}"></p>
 
+<table class="summary" th:with="s=${summary}">
+  <tr><th>總成本</th><th>總市值</th><th>總盈虧</th><th>收益率</th></tr>
+  <tr>
+    <td th:text="${#numbers.formatInteger(s.totalCost, 1, 'COMMA')}"></td>
+    <td th:text="${#numbers.formatInteger(s.marketValue, 1, 'COMMA')}"></td>
+    <td th:classappend="${s.pnl > 0 ? 'up' : (s.pnl < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(s.pnl, 1, 'COMMA')}"></td>
+    <td th:classappend="${s.pnl > 0 ? 'up' : (s.pnl < 0 ? 'down' : '')}" th:text="${s.returnPct} + '%'"></td>
+  </tr>
+</table>
+<p class="muted" th:if="${summary.quoteMissing > 0}" th:text="|有 ${summary.quoteMissing} 筆取不到收盤價，沒有算進總市值與總盈虧|"></p>
+<p class="muted">盈虧＝假設用收盤價全部賣出，扣掉買賣手續費與證交稅後的淨額。紅色是賺、綠色是虧。</p>
+
+
 <form method="post" th:action="@{/holdings}">
   代號 <input name="code" required placeholder="2330">
   張數 <input name="lots" type="number" min="1" max="999" required>
@@ -16,7 +29,7 @@
 </form>
 
 <table>
-  <thead><tr><th>代號</th><th>名稱</th><th>市場</th><th>張數／買進價</th><th>收盤價</th><th>日期</th><th></th></tr></thead>
+  <thead><tr><th>代號</th><th>名稱</th><th>市場</th><th>張數／買進價</th><th>收盤價</th><th>日期</th><th>盈虧</th><th>收益率</th><th></th></tr></thead>
   <tbody>
   <tr th:each="v : ${holdings}" th:with="h=${v.holding}, q=${v.quote}">
     <td th:text="${h.code}"></td>
@@ -32,9 +45,14 @@
     <td th:if="${q != null}" th:text="${#numbers.formatDecimal(q.close, 1, 'COMMA', 2, 'POINT')}"></td>
     <td th:if="${q != null}" th:text="${q.date}"></td>
     <td th:if="${q == null}" colspan="2" class="muted">未取得</td>
+    <th:block th:with="p=${v.pnl}">
+    <td th:if="${p != null}" th:classappend="${p.pnl > 0 ? 'up' : (p.pnl < 0 ? 'down' : '')}" th:text="${#numbers.formatInteger(p.pnl, 1, 'COMMA')}"></td>
+    <td th:if="${p != null}" th:classappend="${p.pnl > 0 ? 'up' : (p.pnl < 0 ? 'down' : '')}" th:text="${p.returnPct} + '%'"></td>
+    <td th:if="${p == null}" colspan="2" class="muted">－</td>
+    </th:block>
     <td><form class="inline" method="post" th:action="@{/holdings/{id}/delete(id=${h.id})}"><button>刪除</button></form></td>
   </tr>
-  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="7" class="muted l">還沒有持股</td></tr>
+  <tr th:if="${#lists.isEmpty(holdings)}"><td colspan="9" class="muted l">還沒有持股</td></tr>
   </tbody>
 </table>
 </main></body></html>

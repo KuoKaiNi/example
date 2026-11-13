@@ -7,3 +7,4 @@ th:first-child,td:first-child,td.l{text-align:left}
 .err{background:#fde8e8;color:#9b1c1c;padding:8px 12px;border-radius:6px}
 form.inline{display:inline}
 input{width:7em}
+table.summary{margin-bottom:12px}table.summary td{font-size:18px;font-weight:600}

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.holdings.common.ApiException;
+import com.example.holdings.pnl.Summary;
 import com.example.holdings.quote.Market;
 import com.example.holdings.quote.Quote;
 import com.example.holdings.quote.QuoteService;
@@ -35,11 +36,17 @@ public class HoldingService {
         return withQuote(get(id));
     }
 
+    public Summary summary(List<HoldingView> views) {
+        Summary.Builder b = new Summary.Builder();
+        views.forEach(v -> b.add(v.cost(), v.pnl()));
+        return b.build();
+    }
+
     HoldingView withQuote(Holding h) {
         if (h.getMarket() == null) backfillMarket(h);
         Quote q = h.getMarket() == null ? null
             : quotes.latestOrEmpty(h.getCode(), Market.valueOf(h.getMarket())).orElse(null);
-        return new HoldingView(h, q);
+        return HoldingView.of(h, q);
     }
 
     /** 第 2 題時期建的資料沒有名稱與市場別，第一次顯示時補上。 */

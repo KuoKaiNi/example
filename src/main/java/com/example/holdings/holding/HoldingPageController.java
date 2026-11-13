@@ -20,7 +20,9 @@ public class HoldingPageController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("holdings", service.listWithQuotes());
+        var views = service.listWithQuotes();
+        model.addAttribute("holdings", views);
+        model.addAttribute("summary", service.summary(views));
         return "holdings";
     }
 
